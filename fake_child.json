@@ -1,0 +1,5 @@
+[
+{"demographic": {"age": "01-Jan-01", "biologicalSex": "Male", "ethnicity": ["french", "french"]}, "lifestyle": {"tobacco": ["Yes", "Yes"]}, "diseases": {"endocrine": ["Yes", "Yes"], "mentalAndBehaviourDisorders": ["No", "No"], "bloodRelatedDisorders": ["Yes"], "respiratorySystem": ["No"], "circulatorySystem": ["Yes"], "oncological": ["No", "No"]}},
+{"demographic": {"age": "02-Feb-02", "biologicalSex": "Female", "ethnicity": ["english", "english"], "householdStructure": ["No"]}, "lifestyle": {"tobacco": ["No", "No"]}, "diseases": {"endocrine": ["No", "No"], "mentalAndBehaviourDisorders": ["Yes", "Yes"], "bloodRelatedDisorders": ["No"], "respiratorySystem": ["Yes"], "circulatorySystem": ["No"], "oncological": ["Yes", "Yes"]}},
+{"demographic": {"age": "03-Feb-03", "biologicalSex": "Male", "ethnicity": ["french", "english"], "householdStructure": ["No"]}, "lifestyle": {"tobacco": ["Yes", "Yes"]}, "diseases": {"endocrine": ["Yes", "Yes"], "mentalAndBehaviourDisorders": ["No", "No"], "bloodRelatedDisorders": ["Yes"], "respiratorySystem": ["No"], "circulatorySystem": ["Yes"], "oncological": ["No", "No"]}}
+]
