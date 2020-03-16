@@ -7,7 +7,7 @@ backing the reference Beacon-2.x implementation.
 * Insert the corresponding CHILD data with:
 
 ```
-gunzip child.vcf
+gunzip 1000genomes.vcf
 python3 ./insert_child.py --vcffile 1000genomes.vcf fake_child.json
 ```
 
