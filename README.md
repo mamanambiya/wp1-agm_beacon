@@ -8,7 +8,7 @@ backing the reference Beacon-2.x implementation.
 
 ```
 gunzip child.vcf
-python3 ./insert_child.py --vcffile child.vcf fake_child.json
+python3 ./insert_child.py --vcffile 1000genomes.vcf fake_child.json
 ```
 
-The fake_child data should be replaced with the WP3-mapped child pseudodata.
+The fake_child data should be replaced with the WP3-mapped child pseudodata.  The VCF file is from 1000 genomes.
