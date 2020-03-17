@@ -1,4 +1,4 @@
-# Inserting CHILD WP3 data into Beacon-2.x
+# Inserting Pseudo-CHILD WP3 data into Beacon-2.x
 
 This script will insert the CHILD pseudodata and some sample variant data into the postgres database
 backing the reference Beacon-2.x implementation.
