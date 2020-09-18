@@ -12,6 +12,14 @@ import psycopg2 as pg
 import vcf
 
 
+def sample_exists(cursor, sample):
+    """
+    check to see if sample already exists in table
+    """
+    cursor.execute("SELECT stable_id from sample_table WHERE stable_id = %s", (sample,))
+    return cursor.fetchone() is not None
+
+
 def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_description, full_access=False):
     """
     Given the Postgres connection, a cursor, and the data, insert the
@@ -20,9 +28,9 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
     now = datetime.datetime.now()
 
     if full_access:
-        access_type = "REGISTERED"
-    else:
         access_type = "CONTROLLED"
+    else:
+        access_type = "REGISTERED"
 
     cursor.execute("SELECT MAX(id) from dataset_table;")
     last_id = cursor.fetchone()[0]
@@ -56,6 +64,10 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
             if isinstance(geographic_origin, list):
                 geographic_origin = geographic_origin[0]
 
+        if not full_access:
+            ethnicity = ""
+            geographic_origin = ""
+
         cursor.execute("SELECT MAX(id) from individual;")
         last_id = cursor.fetchone()[0]
         cursor.execute("""INSERT INTO individual(id, stable_id, sex, ethnicity, geographic_origin)
@@ -65,37 +77,39 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
         print(patient_id, stable_id, sex, ethnicity, geographic_origin)
 
         diseases = patient["diseases"]
-        for disease, present in diseases.items():
-            if isinstance(present, str):
-                present = [present]
-            has_disease = any([p not in ["No", "Never"] for p in present])
+        if full_access:
+            for disease, present in diseases.items():
+                if isinstance(present, str):
+                    present = [present]
+                has_disease = any([p not in ["No", "Never"] for p in present])
 
-            if has_disease:
-                disease_name = disease
-                if disease_name == "oncological":
-                    disease_name = "Cancer"
+                if has_disease:
+                    disease_name = disease
+                    if disease_name == "oncological":
+                        disease_name = "Cancer"
 
-                cursor.execute("SELECT MAX(id) from individual_disease_table;")
-                last_id = cursor.fetchone()[0]
-                cursor.execute("""INSERT INTO individual_disease_table(id, individual_id, disease_id, age)
-                               VALUES (%s, %s, %s, %s)""",
-                               (last_id+1, patient_id, disease, dob))
+                    cursor.execute("SELECT MAX(id) from individual_disease_table;")
+                    last_id = cursor.fetchone()[0]
+                    cursor.execute("""INSERT INTO individual_disease_table(id, individual_id, disease_id, age)
+                                VALUES (%s, %s, %s, %s)""",
+                                (last_id+1, patient_id, disease, dob))
 
         if sample:
-            cursor.execute("SELECT MAX(id) from sample_table;")
-            last_id = cursor.fetchone()[0]
-            cursor.execute("""INSERT INTO sample_table(id, stable_id, individual_id, individual_age_at_collection, collection_date)
-                            VALUES (%s, %s, %s, %s, %s)
-                            RETURNING id""", (last_id + 1, sample, patient_id, age, now))
-            sample_id = cursor.fetchone()[0]
-            sample_to_id[sample] = sample_id
-            assert last_id + 1 == sample_id
-            
+            if not sample_exists(cursor, sample):
+                cursor.execute("SELECT MAX(id) from sample_table;")
+                last_id = cursor.fetchone()[0]
+                cursor.execute("""INSERT INTO sample_table(id, stable_id, individual_id, individual_age_at_collection, collection_date)
+                                VALUES (%s, %s, %s, %s, %s)
+                                RETURNING id""", (last_id + 1, sample, patient_id, age, now))
+                sample_id = cursor.fetchone()[0]
+                sample_to_id[sample] = sample_id
+                assert last_id + 1 == sample_id
+                
 
-            cursor.execute("SELECT MAX(id) from dataset_sample_table;")
-            last_id = cursor.fetchone()[0]
-            cursor.execute("""INSERT INTO dataset_sample_table(id, dataset_id, sample_id)
-                            VALUES (%s, %s, %s)""", (last_id + 1, dataset_id, sample_id))
+                cursor.execute("SELECT MAX(id) from dataset_sample_table;")
+                last_id = cursor.fetchone()[0]
+                cursor.execute("""INSERT INTO dataset_sample_table(id, dataset_id, sample_id)
+                                VALUES (%s, %s, %s)""", (last_id + 1, dataset_id, sample_id))
 
         connection.commit()
 
