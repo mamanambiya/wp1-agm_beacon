@@ -55,12 +55,17 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
         ethnicity = demographic.get("ethnicity", "")
         if isinstance(ethnicity, list):
             ethnicity = ethnicity[0]
-        dob = datetime.datetime.strptime(demographic["age"], "%d-%b-%y")
-        age = dateutil.relativedelta.relativedelta(now, dob).years
+        
+        if isinstance(demographic["age"], int) or isinstance(demographic["age"], float):
+            age = demographic["age"]
+            dob = now - datetime.timedelta(days=365.25*age)
+        else:
+            dob = datetime.datetime.strptime(demographic["age"], "%d-%b-%y")
+            age = dateutil.relativedelta.relativedelta(now, dob).years
 
         geographic_origin = ""
         if "residence" in demographic:
-            geographic_origin = demographic("residence")
+            geographic_origin = demographic["residence"]
             if isinstance(geographic_origin, list):
                 geographic_origin = geographic_origin[0]
 
@@ -76,7 +81,7 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
         patient_id = cursor.fetchone()[0]
         print(patient_id, stable_id, sex, ethnicity, geographic_origin)
 
-        diseases = patient["diseases"]
+        diseases = patient.get("diseases", {})
         if full_access:
             for disease, present in diseases.items():
                 if isinstance(present, str):
