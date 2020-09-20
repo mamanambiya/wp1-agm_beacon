@@ -49,7 +49,7 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
 
     for idnum, (patient, sample) in enumerate(zip(data, padded_samples)):
         demographic = patient["demographic"]
-        stable_id = f"Sythetic_CHILD{(idnum+1):03d}"
+        stable_id = f"{dataset_name}_{access_type}_{(idnum+1):03d}"
 
         sex = demographic["biologicalSex"].lower()
         ethnicity = demographic.get("ethnicity", "")
