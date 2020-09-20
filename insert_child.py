@@ -12,12 +12,12 @@ import psycopg2 as pg
 import vcf
 
 
-def sample_exists(cursor, sample):
+def existing_sample(cursor, sample):
     """
     check to see if sample already exists in table
     """
-    cursor.execute("SELECT stable_id from sample_table WHERE stable_id = %s", (sample,))
-    return cursor.fetchone() is not None
+    cursor.execute("SELECT id from sample_table WHERE stable_id = %s", (sample,))
+    return cursor.fetchone()
 
 
 def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_description, full_access=False):
@@ -75,8 +75,8 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
 
         cursor.execute("SELECT MAX(id) from individual;")
         last_id = cursor.fetchone()[0]
-        cursor.execute("""INSERT INTO individual(id, stable_id, sex, ethnicity, geographic_origin)
-                          VALUES (%s, %s, %s, %s, %s)
+        cursor.execute("""INSERT INTO individual(id, stable_id, sex, ethnicity, geographic_origin, taxon_id)
+                          VALUES (%s, %s, %s, %s, %s, 9606)
                           RETURNING id""", (last_id + 1, stable_id, sex, ethnicity, geographic_origin))
         patient_id = cursor.fetchone()[0]
         print(patient_id, stable_id, sex, ethnicity, geographic_origin)
@@ -100,7 +100,8 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
                                 (last_id+1, patient_id, disease, dob))
 
         if sample:
-            if not sample_exists(cursor, sample):
+            sample_id = existing_sample(cursor, sample)
+            if not sample_id:
                 cursor.execute("SELECT MAX(id) from sample_table;")
                 last_id = cursor.fetchone()[0]
                 cursor.execute("""INSERT INTO sample_table(id, stable_id, individual_id, individual_age_at_collection, collection_date)
@@ -111,10 +112,10 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
                 assert last_id + 1 == sample_id
                 
 
-                cursor.execute("SELECT MAX(id) from dataset_sample_table;")
-                last_id = cursor.fetchone()[0]
-                cursor.execute("""INSERT INTO dataset_sample_table(id, dataset_id, sample_id)
-                                VALUES (%s, %s, %s)""", (last_id + 1, dataset_id, sample_id))
+            cursor.execute("SELECT MAX(id) from dataset_sample_table;")
+            last_id = cursor.fetchone()[0]
+            cursor.execute("""INSERT INTO dataset_sample_table(id, dataset_id, sample_id)
+                            VALUES (%s, %s, %s)""", (last_id + 1, dataset_id, sample_id))
 
         connection.commit()
 
@@ -148,7 +149,7 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
             if count % 100 == 0:
                 print(count, callcount)
 
-            if count % 1000 == 0:
+            if count % 5000 == 0:
                 break
 
         cursor.execute("""INSERT INTO dataset_access_level_table
