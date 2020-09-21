@@ -82,35 +82,41 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
         print(patient_id, stable_id, sex, ethnicity, geographic_origin)
 
         diseases = patient.get("diseases", {})
-        if full_access:
-            for disease, present in diseases.items():
-                if isinstance(present, str):
-                    present = [present]
-                has_disease = any([p not in ["No", "Never"] for p in present])
+        for disease, present in diseases.items():
+            if isinstance(present, str):
+                present = [present]
+            has_disease = any([p not in ["No", "Never"] for p in present])
 
-                if has_disease:
-                    disease_name = disease
-                    if disease_name == "oncological":
-                        disease_name = "Cancer"
+            if has_disease:
+                disease_name = disease
+                if disease_name == "oncological":
+                    disease_name = "Cancer"
+                if not full_access:
+                    disease_name = ""
 
-                    cursor.execute("SELECT MAX(id) from individual_disease_table;")
-                    last_id = cursor.fetchone()[0]
-                    cursor.execute("""INSERT INTO individual_disease_table(id, individual_id, disease_id, age)
-                                VALUES (%s, %s, %s, %s)""",
-                                (last_id+1, patient_id, disease, dob))
+                cursor.execute("SELECT MAX(id) from individual_disease_table;")
+                last_id = cursor.fetchone()[0]
+                cursor.execute("""INSERT INTO individual_disease_table(id, individual_id, disease_id, age)
+                            VALUES (%s, %s, %s, %s)""",
+                            (last_id+1, patient_id, disease, dob))
+
+                cursor.execute("SELECT MAX(id) from individual_phenotypic_feature_table;")
+                last_id = cursor.fetchone()[0]
+                cursor.execute("""INSERT INTO individual_phenotypic_feature_table(id, individual_id, phenotype_id, date_of_onset)
+                            VALUES (%s, %s, %s, %s)""",
+                            (last_id+1, patient_id, disease, now))
+
+
 
         if sample:
-            sample_id = existing_sample(cursor, sample)
-            if not sample_id:
-                cursor.execute("SELECT MAX(id) from sample_table;")
-                last_id = cursor.fetchone()[0]
-                cursor.execute("""INSERT INTO sample_table(id, stable_id, individual_id, individual_age_at_collection, collection_date)
-                                VALUES (%s, %s, %s, %s, %s)
-                                RETURNING id""", (last_id + 1, sample, patient_id, age, now))
-                sample_id = cursor.fetchone()[0]
-                sample_to_id[sample] = sample_id
-                assert last_id + 1 == sample_id
-                
+            sample = sample + "_" + access_type
+            cursor.execute("SELECT MAX(id) from sample_table;")
+            last_id = cursor.fetchone()[0]
+            cursor.execute("""INSERT INTO sample_table(id, stable_id, individual_id, individual_age_at_collection, collection_date)
+                            VALUES (%s, %s, %s, %s, %s)
+                            RETURNING id""", (last_id + 1, sample, patient_id, age, now))
+            sample_id = cursor.fetchone()[0]
+            sample_to_id[sample] = sample_id
 
             cursor.execute("SELECT MAX(id) from dataset_sample_table;")
             last_id = cursor.fetchone()[0]
@@ -141,7 +147,7 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
             variant_id = cursor.fetchone()[0]
             cur_var_id = cur_var_id + 1
 
-            samples_w_variant = [(variant_id, sample_to_id[samp]) for samp in has_var if samp in sample_to_id]
+            samples_w_variant = [(variant_id, sample_to_id[samp + "_" + access_type]) for samp in has_var if samp + "_" + access_type in sample_to_id]
             cursor.executemany("""INSERT INTO variant_sample_table(variant_id, sample_id)
                                   VALUES(%s,%s)""", samples_w_variant)
             count += 1
