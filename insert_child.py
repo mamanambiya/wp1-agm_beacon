@@ -107,6 +107,7 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
                             (last_id+1, patient_id, disease, now))
 
 
+
         if sample:
             sample = sample + "_" + access_type
             cursor.execute("SELECT MAX(id) from sample_table;")
@@ -116,7 +117,6 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
                             RETURNING id""", (last_id + 1, sample, patient_id, age, now))
             sample_id = cursor.fetchone()[0]
             sample_to_id[sample] = sample_id
-                
 
             cursor.execute("SELECT MAX(id) from dataset_sample_table;")
             last_id = cursor.fetchone()[0]
@@ -147,7 +147,7 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
             variant_id = cursor.fetchone()[0]
             cur_var_id = cur_var_id + 1
 
-            samples_w_variant = [(variant_id, sample_to_id[samp+"_"+access_type]) for samp in has_var if samp in sample_to_id]
+            samples_w_variant = [(variant_id, sample_to_id[samp + "_" + access_type]) for samp in has_var if samp in sample_to_id]
             cursor.executemany("""INSERT INTO variant_sample_table(variant_id, sample_id)
                                   VALUES(%s,%s)""", samples_w_variant)
             count += 1
