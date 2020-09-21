@@ -82,22 +82,30 @@ def ingest(connection, cursor, data, samples, vcffile, dataset_name, dataset_des
         print(patient_id, stable_id, sex, ethnicity, geographic_origin)
 
         diseases = patient.get("diseases", {})
-        if full_access:
-            for disease, present in diseases.items():
-                if isinstance(present, str):
-                    present = [present]
-                has_disease = any([p not in ["No", "Never"] for p in present])
+        for disease, present in diseases.items():
+            if isinstance(present, str):
+                present = [present]
+            has_disease = any([p not in ["No", "Never"] for p in present])
 
-                if has_disease:
-                    disease_name = disease
-                    if disease_name == "oncological":
-                        disease_name = "Cancer"
+            if has_disease:
+                disease_name = disease
+                if disease_name == "oncological":
+                    disease_name = "Cancer"
+                if not full_access:
+                    disease_name = ""
 
-                    cursor.execute("SELECT MAX(id) from individual_disease_table;")
-                    last_id = cursor.fetchone()[0]
-                    cursor.execute("""INSERT INTO individual_disease_table(id, individual_id, disease_id, age)
-                                VALUES (%s, %s, %s, %s)""",
-                                (last_id+1, patient_id, disease, dob))
+                cursor.execute("SELECT MAX(id) from individual_disease_table;")
+                last_id = cursor.fetchone()[0]
+                cursor.execute("""INSERT INTO individual_disease_table(id, individual_id, disease_id, age)
+                            VALUES (%s, %s, %s, %s)""",
+                            (last_id+1, patient_id, disease, dob))
+
+                cursor.execute("SELECT MAX(id) from individual_phenotypic_feature_table;")
+                last_id = cursor.fetchone()[0]
+                cursor.execute("""INSERT INTO individual_phenotypic_feature_table(id, individual_id, phenotype_id, date_of_onset)
+                            VALUES (%s, %s, %s, %s)""",
+                            (last_id+1, patient_id, disease, now))
+
 
         if sample:
             sample_id = existing_sample(cursor, sample)
